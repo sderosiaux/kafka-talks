@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Kafka ? Késako ? - @sderosiaux</title>
+    <meta charset="utf-8" />
+    <style>
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Open+Sans:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Acme);
+
+      body {
+        font-family: "Open Sans";
+        color: white;
+      }
+      h1,
+      h2,
+      h3 {
+        font-family: "Acme";
+        font-weight: normal;
+      }
+      h1 {
+        border-bottom: 3px solid #039be5;
+      }
+      a {
+        color: #039be5;
+      }
+      .remark-code,
+      .remark-inline-code {
+        font-family: "Ubuntu Mono";
+      }
+      .inverse {
+        background: #272822;
+        color: #777872;
+        text-shadow: 0 0 20px #333;
+      }
+      .inverse h1,
+      .inverse h2 {
+        color: #f3f3f3;
+        line-height: 0.8em;
+      }
+      .center img {
+        width: 100%;
+      }
+      li + li {
+        margin-top: 0.3em;
+      }
+      li li {
+        opacity: 0.8;
+        margin-top: 0.3em;
+        font-size: large;
+        list-style-type: none;
+      }
+      li li:before {
+        content: "— ";
+      }
+      .right {
+        right: 1em;
+      }
+      .bottom {
+        position: absolute;
+        bottom: 2em;
+      }
+      .small img {
+        width: 200px;
+      }
+      .medium img {
+        width: 350px;
+      }
+      .floatright {
+        float: right;
+      }
+      .smallheight img {
+        height: 200px;
+      }
+      .author {
+        position: absolute;
+        bottom: 12px;
+        width: 100%;
+        left: 0;
+        text-align: center;
+      }
+      .author a {
+        text-decoration: none;
+      }
+
+      .remark-slide-content {
+        background: #00517c;
+      }
+      .remark-container {
+        background: #00517c;
+      }
+      .remark-slide-scaler {
+        box-shadow: none;
+      }
+      strong {
+        color: #8bc34a;
+        font-weight: normal;
+      }
+      .full {
+        width: 100%;
+        height: 100%;
+        padding: 0;
+      }
+      .footer {
+        position: absolute;
+        bottom: 3em;
+      }
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+
+layout: true
+me: sderosiaux
+count: false
+
+<!--
+class: inverse
+background-image: url(https://wallpapercave.com/wp/PQ2vgJK.jpg)
+-->
+
+---
+
+layout: true
+
+.author[[@sderosiaux](https://twitter.com/sderosiaux)]
+
+---
+
+class: center, middle
+
+# Kafka ? Késako ?
+
+### *Pas juste du Publish/Subscribe*
+
+???
+
+++ Notes
+
+--
+
+### **"A High-Throughput Low-Latency Elastic Replicated Durable Unlimited Append-Only Commit Log Service"**
+### **"..And More"**
+
+---
+
+# Agenda
+
+.floatright.small[![](2019-11-11-11-19-24.png)]
+
+- Kafka: à quoi ça sert ?
+- La Streaming Platform Kafka
+  - Confluent
+- Son utilisation dans le monde et chez Adeo
+  - La Data Streaming Platform
+- Kafka: le cœur et sa plateforme
+  - Les concepts
+  - Le Schema Registry
+  - Kafka Streams - KSQL
+  - Kafka Connect
+- Le monitoring & les outils
+
+
+---
+
+# Kafka: à quoi ça sert ?
+
+- Stocks en temps réel, Prix dynamiques (contextualisés), Santé (capteurs), Logs, IOT, Réseaux, Traffic web, … ∞
+- Dashboards en temps réel, Alertes, Fraude, Machine Learning
+- **Un bus d'événements** (mais pas que)
+  - Il s'est passé "ça" côté business
+  - Un *peu* comme ce qui transite par l'ESB
+  - Pas de destinataire
+  - **Découplage** des applications
+  - Facile de rajouter des use-cases (des consommateurs)
+  - Des "petits" services dédiés à un domaine plutôt qu'un "gros" service
+- Les événements y sont persistés
+  - Récupération après leur envoi (rétention courte ou infinie)
+  - Reprise (problème en aval)
+  - Traitement avec d'autres algorithmes (A/B)
+
+???
+
+//- CQRS, Event Sourcing...
+
+---
+
+class: center, middle
+
+# Un flow business partagé
+
+![](2019-11-03-23-32-07.png)
+
+???
+
+- === 9 min
+
+---
+
+# La **Streaming Platform** Kafka
+
+- Pas qu'un bus d'événements
+- Bienvenue au **Stream Processing**
+  - 👋 les batchs, 🙏 temps réel
+  - Publish/Subscribe, Store, Process, [Detect, Notify]
+  - Avec ou sans état (group by, aggrégations, jointures, dernière valeur vue..)
+- **Kafka**, Zookeeper, Kafka **Streams**, **KSQL**, Kafka **Connect**, Connectors, **Schema Registry**, REST Proxy, MirrorMaker/Replicator, MQTT Proxy, Opérateurs Kubernetes...
+- Ne pas tout héberger soi-même: Monitoring & Opérationnel délicat
+- Confluent.io 💰
+    - "The Complete Event Streaming Platform For Apache Kafka®"
+    - Confluent OSS + Confluent Commercial
+    - Confluent Cloud
+    - Autres: [aiven.io](https://aiven.io), [cloudkarafka.com](https://cloudkarafka.com), [AWS MSK](https://aws.amazon.com/msk/)
+
+???
+
+- === 10 min
+
+- Real-time: Actionable / Predictif: on peut altérer rapidement les **comportements** (l'utilisateur ne sera là que maintenant!)
+- Real-time: doit être **BUSINESS** centric
+- Les batchs sont toujours OK: reporting hebdo etc. "hors métier"
+- Confluent Free: REST Proxy, Schema Registry, KSQL, quelques Connectors
+- Confluent Commercial: d'autres Connectors, des plugins de Sécurité, du load-balancing, le Replicator, le CCC..
+- Stream Processing: Kafka Streams ou KSQL
+- Confluent Cloud: personal or pro comme la **DSP**
+
+---
+
+class: center, middle, full
+
+# Octobre 2019: Kafka 2.4
+
+![Kafka & Confluent History](2019-11-07-23-48-05.png)
+
+---
+
+# @World
+
+- Call of Duty: **10k-100k** msg/s ; 500 topics
+- Tinder: **1M** msg/s ; 40TB/j
+- Criteo: **7M** msg/s ; 180TB/j ; 14 clusters ; 200 brokers ; 150 topics
+- Pinterest: **10M** msg/s ; 1.2PB/j; +10 clusters ; 2,000 brokers (AWS)
+- Netflix: **2 billions*** msg/j ; 6PB/j ; +50 clusters ; +4,000 brokers (AWS)
+- LinkedIn: **7 billions*** msg/j ; +100 clusters ; 4,000 brokers ; 100,000 topics
+- Apple, Walmart, Lyft, Uber, Spotify, ...
+
+.footer[`*` un billion (FR) = un trillion (EN) = 1,000,000,000,000]
+
+???
+
+---
+
+# @Adeo: **Data Streaming Platform**
+
+[...]
+
+.right.bottom.small[![](http://pluspng.com/img-png/uncle-sam-i-want-you-png-pin-uncle-sam-clipart-we-need-you-5-1191.jpg)]
+
+---
+
+class: center, full, middle
+
+![](2019-11-11-21-15-45.png)
+
+---
+
+# Kafka: le noyau
+
+- Un cluster = des **brokers** (1, 10, 100, ...)
+- Des **topics** (avec `ρ` **partitions**)
+  - `n` Producers, `m` Consumers
+  - Une rétention (ou pas)
+- Un message = (une clef, une valeur) + des metadata
+- Des **bytes** en entrée, des **bytes** en sortie
+- Immutabilité des messages (seulement de l'ajout)
+- Clients: Java, Scala, C/C++, Go, .NET, Python, ...
+- Sécurisé (SSL/SASL: _authn_, Access Control List: _authz_)
+- Un protocole TCP (une proxy Kafka-REST existe pour faire du HTTP)
+
+???
+
+---
+
+# Kafka: Dumb. Nous: Smart.
+
+- Dump Pipe (Kafka) / ***Smart* Endpoint** (NOUS! 💪)
+- Tout ce qu'il ne fait **pas** 🤷
+  - Pas de filtrage, pas de routage
+  - Pas de push vers les consommateurs
+  - Pas d'accusé de réception par message (ack)
+  - Pas de gestions d'erreurs (retry)
+  - Pas de DLQ (Dead Letter Queue)
+- Tout ce qu'il fait
+  - Il fait passe-plat de bytes
+- Peut devenir la "source of truth" (ou pas)
+    - Les bases de données peuvent être vues comme des sinks qu'on peut vider et recréer avec un modèle différent (CQRS)
+
+---
+
+# Kafka: les concepts 😨
+
+**topics**, **partitions**, hot-spots, immutability, **ordering** guarantees, **keys**, partitions **leadership**, leader election, unclean election, replicas, preferred replica, **offsets**, reset, consumer groups, **lag**, broker discovery, zero-copy, bi-directional compatibility, retries, out-of-ordering, **idempotence**, max in-flights requests, **batching strategies**, logs, segments, segments indexes, delivery semantics, polling strategies, **commits** strategies, heartbeats, keyed topics, **partitioner**, **replication factor**, **compaction**, tombstones, compression, **retention**, **advertised listeners**, group coordinator, **transactions**, watermarks, event-carried state transfer, multi-tenancy, protocol version, **offsets retention**, upconversion/downconversion, epoch, **ISR**, replicas, timestamp types, control plane, log rolling, min insync replicas, followers, quotas, **acks**, racks, log cleaner, security, sasl, principal, cleanup policy, static membership, fetch sessions, interceptors, **isolation level**, exactly-once, purgatory, zombie fencing…
+
+Et après, il y a encore les concepts de Kafka Streams, Kafka Connect, ...
+
+---
+
+# Kafka: les Producers
+
+- Un "serializer": `OrderCreated` vers `byte[]`
+- Orientés performance
+  - Du batch: tous les 100 messages ou toutes les 2s
+  - Compression
+- En cas de problème
+  - Durabilité: *acks* (0 / 1 / **all**)
+  - Retries: out-of-order ⚠️
+  - Idempotence: éviter les doublons dans les topics
+  - Transactions
+
+.bottom.smallheight[![](2019-11-07-22-20-39.png)]
+
+---
+
+# Kafka: les Consumers
+
+.floatright.small[![](2019-11-11-22-19-58.png)]
+
+- Un "deserializer": `byte[]` vers `OrderCreated`
+- Orientés performance
+  - Du batch: on récupère par paquet de 1MB ou tous les 200ms
+- Orienté partage
+  - "Consumer Group" (`group.id`)
+  - *Rebalance Protocol*
+- Commit par offsets
+  - Sauvegardés dans Kafka (dogfooding)
+  - Le **lag**
+
+???
+
+---
+
+# Schema Registry 📝
+
+- Une API (et un référentiel) de schémas **Apache Avro**
+    - Partage, Gouvernance
+- Apache Avro
+    - Basé sur des schémas: `{ name, type [alias, default, doc] }`
+    - Génération du code à partir du schéma (..ou l'inverse)
+    - Binaire (illisible), très *très* compact
+    - Compatibilité Ascendante et/ou Descendante
+    - Polyglotte
+
+```json
+{"namespace": "com.adeo.sales.customerorder",
+ "type": "record",
+ "name": "CustomerOrder",
+ "fields": [
+     {"name": "id", "type": "string"},
+     {"name": "version", "type": "int"},
+     {"name": "internalId", "type": ["null", "string"], "default": null},
+     ...
+```
+
+???
+
+- Avro: from Hadoop
+- Un peu comme OpenAPI mais juste au niveau "data"
+- org.apache.avro.avro-maven-plugin
+- polyglotte
+- On veut la compat parce qu'on fait du temps-réel et qu'on veut s'assurer de rien casser
+  - Backward: la PS2 accepte les jeux PS1: données manquantes: pas grave, on "comble" avec une "default value"
+  - Forward: Format tolérant aux nouveautés: la Gameboy peut lire les jeux de la Gameboy Color (sortie plus tard!)
+
+
+---
+
+# Kafka Streams ⚙️
+
+.floatright.small[![](2019-11-11-22-30-38.png)]
+
+- Utilisation: de Kafka à Kafka
+  - Réaction à des événements, qui en produisent d'autres (ou pas)
+  - Transformations, filtrage, aggrégations, enrichissements (APIs externes), ...
+  - Event Sourcing: OrderCreated + ItemsAdded + OrderPayed + OrderDelivered
+- Une "simple" librairie Java
+  - Simple application Java, ou Spring, ou Quarkus etc.
+- Streaming Applications
+    - Traitement en temps réel des événements
+    - Difficile de le faire soi-même:
+        - Ordre, scalabilité, tolérance à la panne, état, gestion du temps
+    - On _évitera_ de taper une API extérieure
+
+???
+
+- Tourne où on veut (laptop, VMs, k8s), juste un process!
+- Scale: S, M, XL, XXXXL
+- Gestion du TEMPS: windowing, désordre, retard
+(- Event Time VS Processing Time)
+
+---
+
+# Kafka Streams ⚙️
+
+- DSLs: la "facile" et la "moins facile"
+- Fonctionnalités
+  - **Exactly-once processing**: atomicité
+  - jointures de streams en temps réel
+  - fonctions sans état (`map`, `filter`) et avec état (`aggregate`, `join`)
+  - une **table** est une "vue" matérialisée d'un **stream** (le montant par heure, le delta stocks)
+- Le diable est dans les détails 😈
+    - RocksDB
+    - Impact sur le cluster Kafka: topics "internes" (`-changelog`, `-repartition`)
+    - Temps de restauration des applications
+    - Gestion du temps: windowing, late events
+- Alternatives: Flink, Spark, Storm, Samza
+
+???
+
+- RocksDB: IO, mémoire, Kubernetes (StatefulSets)
+- +20 +70 streams <=> +90 table (aggregations..)
+- Jointure: même clef requise! même nombre de partitions!
+
+---
+
+# Kafka Streams: exemple
+
+```scala
+stream("topic-phrases")
+    .flatMapValues { line => line.toLowerCase.split("\\W+") }
+    .groupBy { (_, value) => value }
+    .count.toStream.to("topic-wordcount")
+```
+
+
+```plain
+# "topic-phrases"
+all streams lead to kafka
+hello kafka streams
+join kafka ftw
+```
+
+```plain
+# "topic-wordcount"
+all     : 1
+streams : 1
+lead    : 1
+to      : 1
+kafka   : 1
+hello   : 1
+kafka   : 2 *
+streams : 2 *
+join    : 1
+kafka   : 3 **
+ftw     : 1
+```
+
+???
+
+---
+
+# KSQL: orienté ETL
+
+Similaire à Kafka Streams mais...
+
+.medium.floatright[![KSQL](2019-11-07-23-58-35.png)]
+
+- "Le moteur SQL au-dessus de Kafka"
+- Magique ✨
+- Plus simple (?)
+    - SQL-like
+    - Possibilité de rajouter des _User-Defined Functions_ (`my-ksql-udf.jar`)
+    - Moins de fonctionnalités
+- Modes: Console, API REST, _headless_
+- Une plateforme (ksql) dans une plateforme (kubernetes)...
+- Beaucoup beaucoup d'évolutions à prévoir
+
+???
+
+- Plateforme: avec les RocksDB: IO/memory/disques importants
+- UDF: custom algorithms, ML, ...
+- Evol: "pull queries": un SELECT qui "termine"
+- Evol: aspect industrialisation, parlé au PM!
+
+---
+
+# KSQL: exemples
+
+```sql
+-- On créé des STREAMs ou des TABLEs
+CREATE STREAM orders (ORDERID string, ORDERTIME bigint...)
+  WITH (kafka_topic='orders', value_format='JSON');
+CREATE TABLE countries (code VARCHAR, name VARCHAR)
+  WITH (kafka_topic='country_csv', value_format='delimited', key='code');
+
+-- JSON nested
+CREATE STREAM orders (
+  orderId BIGINT,
+  address STRUCT<street VARCHAR, zip INTEGER>) WITH (...);
+
+-- CREATE STREAM ... AS SELECT ...
+CREATE STREAM platinum_emails AS
+  SELECT * FROM orders, customers WHERE client_level == "PLATINUM";
+
+-- Changement de la key + repartitionnement: création d'un nouveau topic
+CREATE STREAM emails_by_provider WITH (PARTITIONS = 1) AS
+  SELECT * FROM emails PARTITION BY provider_name;
+
+-- Classique SELECT
+SELECT code, name FROM countries WHERE code = 'FR' LIMIT 1;
+```
+
+???
+
+- === 48 min
+
+---
+
+# Kafka Connect
+
+.floatright.medium[![](2019-11-11-23-02-35.png)]
+
+- Utilisation
+    - De **Pas Kafka** à Kafka
+    - De Kafka à **Pas Kafka**
+- Pour de la "copie" de data
+    - Copie dans plusieurs BDDs en parallèle: CQRS
+- Une *plateforme* distribuée avec des workers en attente de travail
+    - Résistant aux pannes
+    - Scale horizontalement
+    - REST API
+    - Monitoring, Administration ⚠️
+- La plupart des connecteurs existent, et sont fiables
+    - On évite de réécrire la roue
+    - PostgreSQL, MongoDB, AWS S3, GCS, Elasticsearch, Hadoop...
+
+???
+
+- === 50 min
+
+---
+
+# Une plateforme connectée
+
+.center[![](2019-11-11-23-07-24.png.png)]
+
+---
+
+class: center, middle, full
+
+# Le monitoring: Grafana ❤️ Prometheus
+
+![](2019-11-07-22-56-06.png)
+
+---
+
+class: center, middle, full
+
+# Le Distributed Tracing
+
+![](2019-11-07-23-27-17.png)
+
+---
+
+# Outils 🤗
+
+- Rien de tel qu'un terminal:
+    - `kafka-*.sh`: les "officiels" (plus d'une dizaine, JVM)
+    - `kafkacat`: le même en _mieux_ (non-JVM)
+- Opérations délicates: [kafka-utils](https://github.com/Yelp/kafka-utils) (**Yelp**), [kafka-kit](https://github.com/DataDog/kafka-kit) (**Datadog**), [kafkat](https://github.com/airbnb/kafkat) (**Airbnb**), [Cruise Control](https://github.com/linkedin/cruise-control) (**LinkedIn**), [DoctorKafka](https://github.com/pinterest/doctorkafka) (**Pinterest**)
+- Monitoring: [Control Center](https://docs.confluent.io/current/control-center/index.html) (**Confluent**), [Kafka Manager](https://github.com/yahoo/kafka-manager) (**Yahoo**), [Kafka Eagle](https://github.com/smartloli/kafka-eagle), [kafdrop](https://github.com/obsidiandynamics/kafdrop), [Kafka View](https://github.com/fede1024/kafka-view), [KafkaHQ](https://github.com/tchiotludo/kafkahq), [Kafka Connect UI](https://github.com/lensesio/kafka-connect-ui), [Schema Registry UI](https://github.com/lensesio/schema-registry-ui), [Operatr](https://operatr.io/)
+- Lag des consommateurs: [Burrow](https://github.com/linkedin/Burrow) (**LinkedIn**), [Remora](https://github.com/zalando-incubator/remora) (**Zalando**), [Kafka Offset Monitor](https://github.com/Morningstar/kafka-offset-monitor), [Hawk](https://github.com/farmdawgnation/kafka-hawk)
+- Desktop Application: [Conduktor.io](https://www.conduktor.io/download)
+
+---
+
+class: center, middle
+count: false
+
+# Questions?
+
+
+---
+
+count: false
+
+# Les erreurs 😱
+
+```plain
+stream-thread [StreamThread-7] Failed to rebalance.
+
+task [0_1] Failed to initialize task 0_1 due to timeout.
+
+Timeout expired while initializing transactional state in 60000ms.
+
+Error when handling request: clientId=broker-4-fetcher-0, correlationId=472195926, api=FETCH, body={...}
+
+java.lang.IllegalStateException: TransactionalId xxx-0_5 failed transition to state TxnTransitMetadata(...) due to unexpected metadata
+
+ERROR [ReplicaManager broker=1] Error processing append operation on partition xxx-12
+
+NotEnoughReplicasException: The size of the current ISR Set(2, 1) is insufficient to satisfy the min.isr requirement of 3 for partition
+
+Attempt to heartbeat failed since group is rebalancing
+
+task [0_1] Timeout exception caught when initializing transactions for task 0_1. [...] You can increase producer parameter `max.block.ms` to increase this timeout.
+
+Error caught during partition assignment, will abort the current process and re-throw at the end of rebalance: {}
+
+Group coordinator confluent-3.c.xxx.internal:9092 (id: 2147483644 rack: null) is unavailable or invalid
+```
+
+    </textarea>
+    <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+    <script>
+      var slideshow = remark.create({ highlightLanguage: "github" });
+    </script>
+  </body>
+</html>
