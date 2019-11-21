@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Terraform - @sderosiaux</title>
+  <meta charset="utf-8" />
+  <style>
+    @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+    @import url(https://fonts.googleapis.com/css?family=Open+Sans:400,700,400italic);
+    @import url(https://fonts.googleapis.com/css?family=Acme);
+
+    body {
+      font-family: "Open Sans";
+      color: #444;
+    }
+
+    h1,
+    h2,
+    h3 {
+      font-family: "Acme";
+      font-weight: normal;
+    }
+
+    h1 {
+      border-bottom: 3px solid #039be5;
+    }
+
+    a {
+      color: #039be5;
+    }
+
+    .remark-code,
+    .remark-inline-code {
+      font-family: "Ubuntu Mono";
+    }
+
+    .center img {
+      width: 100%;
+    }
+
+    li+li {
+      margin-top: 0.3em;
+    }
+
+    li li {
+      opacity: 0.8;
+      margin-top: 0.3em;
+      font-size: large;
+      list-style-type: none;
+    }
+
+    li li:before {
+      content: "— ";
+    }
+
+    .right {
+      right: 1em;
+    }
+
+    .bottom {
+      position: absolute;
+      bottom: 2em;
+    }
+
+    .small img {
+      width: 200px;
+    }
+
+    .medium img {
+      width: 350px;
+    }
+
+    .floatright {
+      float: right;
+    }
+
+    .smallheight img {
+      height: 200px;
+    }
+
+    .author {
+      position: absolute;
+      bottom: 12px;
+      width: 100%;
+      left: 0;
+      text-align: center;
+    }
+
+    .author a {
+      text-decoration: none;
+    }
+
+    .remark-slide-content {
+      background: white;
+    }
+
+    .remark-container {
+      background: white;
+    }
+
+    .remark-slide-scaler {
+      box-shadow: none;
+    }
+
+    strong {
+      color: #8bc34a;
+      font-weight: normal;
+    }
+
+    .full {
+      width: 100%;
+      height: 100%;
+      padding: 0;
+    }
+
+    .footer {
+      position: absolute;
+      bottom: 3em;
+    }
+  </style>
+</head>
+
+<body>
+  <textarea id="source">
+
+layout: true
+me: sderosiaux
+count: false
+
+<!--
+class: inverse
+background-image: url(https://wallpapercave.com/wp/PQ2vgJK.jpg)
+-->
+
+---
+
+layout: true
+
+.author[[@sderosiaux](https://twitter.com/sderosiaux)]
+
+---
+
+class: center, middle
+
+# Terraform? Késako?
+
+### *Infrastructure As "Code" (IAC)*
+
+#### _TF pour les intimes_
+
+---
+
+# Pourquoi?
+
+- _No click_
+- Création via une _description_
+  - On sait exactement de quoi notre infra est faîte
+  - Répétable
+  - Variabilisable
+  - Versionable
+  - Partageable
+  - Modularisable
+  - Facile à CI/CD (avec étape manuelle généralement)
+- Terraform s'assure d'obtenir l'état qu'on veut
+  - ce n'est pas à nous de scripter les actions à effectuer (DAG)
+  - affiche les deltas entre l'état courant et celui qu'on veut
+- Import de ressources existantes "possible" (migration)
+- Terraform: "juste" un wrapper d'APIs
+- Pas forcément "que" de l'infra
+
+---
+
+# Exemples
+
+```
+# un secret
+resource "vault_generic_secret" "my_secret"
+  path      = "secret/dev/my-app/url"
+  data_json = { "foo": "bar" }
+
+# une database
+resource "google_sql_database" "invoicing_database"
+  name = "my_invoicing_db"
+
+# un utilisateur à facturer
+resource "google_sql_user" "invoicing_sql_user"
+  name     = "my_boss"
+  instance = "my_invoicing_db"
+
+# un topic kafka
+resource "kafka_topic" "my-test-topic"
+  name       = "EVENT-MY-APP-GRP-GRP-P3-C3-MY-TOPIC-V1"
+  partitions = 10
+
+# un connector
+resource "kafka-connect_connector" "db-sink-connector"
+  name      = "my-connector"
+  connector = "io.confluent.connect.jdbc.JdbcSinkConnector"
+  topics    = "orders"
+```
+
+---
+
+# L'infrastructure?
+
+- Networks, VPC, VPN
+- Load balancers
+- Databases
+- Outils de Monitoring (Grafana, StackDriver) ?
+- Repositories de code (+ members, teams) ?
+- Helm (tiller) ?
+- Les plateformes: Kafka Connect ?
+
+Leur configurations:
+
+- Users, Permissions, ACLs
+- Topics, Consumer Groups
+- Connectors
+
+
+---
+
+# Le vocabulaire
+
+- `provider`
+ - GCP, Vault, Aiven, Kubernetes etc. les APIs où il faut des accès
+- `resource`
+  - un truc créé chez un provider
+  - une VM, un topic, une database, un VPC, une route, un user, une permission, un repository...
+- `data`
+  - une "query" sur une ressource qu'on ne gère pas via TF / qui existe déjà
+  - on veut juste pouvoir référencer la ressource dans d'autres resources
+- `backend`
+ - TF est stateful: mapping entre les ids réél et nos déclarations
+- `module`
+ - une abstraction réutilisable
+ - des entrées, [une boîte noire], des sorties
+
+---
+
+# `provider`s officiels (sinon GitHub)
+
+- Fournissent des `resource`s
+- Il faut y configurer les accès
+- Une `resource` est liée à un `provider`
+- Un module ne configure pas un `provider`: réutilisation
+
+...
+AWS
+Azure
+...
+Cloudflare
+...
+Consul
+Datadog
+DigitalOcean
+...
+**Docker**
+...
+Fastly
+...
+**GitHub**
+**GitLab**
+**Google Cloud Platform**
+**Grafana**
+...
+**Helm**
+Heroku
+...
+HTTP
+...
+**Kubernetes**
+...
+**MongoDB Atlas**
+MySQL
+...
+Netlify
+New Relic
+...
+OVH
+Packet
+PagerDuty
+...
+**PostgreSQL**
+...
+RabbitMQ
+...
+Rundeck
+...
+Terraform
+Terraform Cloud
+TLS
+....
+**Vault**
+...
+
+
+---
+
+# `data`: interroger l'existant
+
+- Certains éléments existent déjà
+ - on veut les référencer dans nos nouvelles constructions
+ - on peut les `query` en connaissant leur nom
+ - ça retourne tous les attributs et créé une référence Terraform
+ - on peut utiliser la référence Terraform dans nos `resource` (DAG)
+
+```
+# Je récupère les infos d'un réseau existant
+#    "[resource_type]         "[name]"
+data "google_compute_network" "child_network" {
+  project = "my-project-name"
+  name = "my-child-network-on-gcp"
+}
+
+...
+
+# Je créé un sous-réseau appartenant à ce réseau
+resource "google_compute_network" "parent_network" {
+  # subnetwork = [resource_type].[name]
+  subnetwork = google_compute_network.child_network.name
+}
+```
+
+---
+
+# Le `backend` de Terraform
+
+- Etat "terraformé" à sauvegarder
+	- TF se base sur son état (`tfstate`), et non sur l'état réel
+	  - on peut `import` si on suspecte que l'état réel a changé
+  - (local), GCS, S3, PostgreSQL, Consul, etcd, Terraform Cloud
+- Stratégie de lock
+
+```
+terraform {
+  backend "gcs" {
+    credentials = "./account.json"
+    bucket  = "data-financial-rec-terraform-tfstate"
+    prefix  = "tfstates"
+  }
+}
+```
+
+---
+
+# Qui fait quoi ?
+
+- Terraform peut être lancé par les dévs directement
+- Le backend étant partagé (GCS, S3..), pas de problème de synchro
+- La CI/CD peut venir plus tard, sur certaines parties
+- Tests: aucun sur un projet métier. Pas notre coeur de métier (pas comme IAAS)
+
+---
+
+# Inspecter ce qui existe
+
+```
+$ terraform show
+
+# google_compute_network.vpc_network:
+resource "google_compute_network" "vpc_network" {
+    auto_create_subnetworks         = true
+    delete_default_routes_on_create = false
+    id                              = "projects/super-project-123456/global/networks/tf-network"
+    name                            = "tf-network"
+    project                         = "super-project-123456"
+    routing_mode                    = "REGIONAL"
+    self_link                       = "https://www.googleapis.com/compute/v1/projects/super-project-123456/global/networks/tf-network"
+}
+```
+
+---
+
+# Importer l'existant
+
+- TF peut importer dans son _state_ ce qui existe
+- Mais il ne va pas écrire les `resources` correspondantes
+
+```
+$ terraform import kafka_topic.customer-order-topic customer-order
+# state mis à jour
+```
+- A nous d'écrire la suite:
+```tf
+resource "kafka_topic" "customer-order-topic" {
+  name = "customer-order"
+  partitions = 10
+  ...
+}
+```
+
+- `terraform plan` ne devrait trouver aucune différence
+
+---
+
+
+# Taint/Untaint
+
+- Forcer la destruction + création d'une resource
+- Pratique pour rejouer les _effets de bord_ (`provisioner`)
+  - ne tourne qu'à la création ou destruction
+
+````
+$ terraform taint google_compute_instance.my-vm
+$ terraform plan
+... -destroy
+... +create
+$ terraform apply
+...
+google_compute_instance.my-vm: Destroying...
+...
+google_compute_instance.my-vm: Creating...
+google_compute_instance.my-vm: Still creating... [10s elapsed]
+google_compute_instance.my-vm: Provisioning with 'local-exec'...
+google_compute_instance.my-vm (local-exec): Executing: ["cmd" "/C" "echo tf-instance: 34.90.118.196 >> ip_address.txt"]
+...
+```
+
+---
+
+# Modules
+
+```
+Un module =
+  variables d'entrées
++ boîte noire
+= des outputs
+```
+
+- Les providers sont configurés en dehors des modules (pour la réutilisation)
+ - auth différente
+
+---
+
+# Modules: structure
+
+```
+main.tf
+./kafka-dsp
+ |- main.tf
+ |- variables.tf
+ |- outputs.tf
+ |- README.md
+```
+
+```
+# main.tf
+module "kafka-dsp" {
+  source    = "./kafka-dsp"
+  application = "my-app"
+  topics = [ "customer-order", "legacy" ]
+}
+```
+
+---
+
+# Modules: (1) variable d'entrées
+
+```
+variable "toto-name" {
+  type = list(string)
+  type = bool
+  default = "toto"
+  description = "Le nom de toto"
+```
+
+```
+list(<TYPE>)
+set(<TYPE>)
+map(<TYPE>)
+object({<ATTR NAME> = <TYPE>, ... })
+tuple([<TYPE>, ...])
+
+# Composition
+list(object({
+  internal = number
+  external = number
+  protocol = string
+}))
+```
+
+---
+
+# Modules: remplir les variables
+
+- `terraform.tfvars` (liste de "var=value")
+- Fichier custom: `-var-file my-vars.tfvars` (CI/CD)
+- Environnement: `TF_VAR_gcp_credentials_file=./xxx`
+
+---
+
+# Modules: les sorties de la boîte noire
+
+- Un module fait sa popote et peut transmettre des valeurs à l'appelant
+````
+output "your-service-ip" {
+  value = google_compute_address.vm_static_ip.address
+}
+```
+
+
+---
+
+# Ce qu'on peut automatiser dès maintenant
+
+- Un tas de providers existant ou open-source
+  - Gitlab, Github (mirroring, droits)
+  - Aiven (Kafka, topics, database)
+  - Vault
+
+eg: Kafka https://github.com/Mongey/terraform-provider-kafka
+- provider "kafka"
+- resource "kafka_topic"
+- resource "kafka_acl"
+
+---
+
+# La CI/CD
+
+- 3 commandes:
+
+```
+$ terraform init -input=false
+$ terraform plan -input=false -out=tfplan
+$ terraform apply -input=false tfplan
+```
+
+- `TF_IN_AUTOMATION=1`
+- Build artefact: `.terraform`
+- Etape manuelle pour faire `apply`
+
+---
+
+# Les cloud providers
+
+- Difficulté: connaître l'infrastructure même
+  - les droits (IAM)
+  - les stacks réseaux
+  - ingress, egress
+  - vpc, vpn, firewalls
+
+```
+resource "google_project_iam_member" "xxx" {
+  role    = "roles/compute.networkUser"
+  project = ...
+  member  = "serviceAccount:${var.gcp_project_id}@cloudservices.gserviceaccount.com"
+}
+resource "google_compute_global_address" "xxxlb" {
+  name = ...
+}
+data "google_dns_managed_zone" "xxx_zone" {
+  name = ...
+  project = ...
+}
+
+resource "google_dns_record_set" "xx_dns" {
+  name = ...
+  managed_zone = ...
+  project = ...
+  type = "A"
+  ttl  = 300
+
+  rrdatas = [google_compute_global_address.xxxlb.address]
+}
+```
+
+---
+
+# DRY
+
+- créer plusieurs resources à partir d'un array
+
+```
+resource "github_repository" "projects" {
+  name = each.key <<<
+  private = true
+...
+  description = each.value.description
+  topics = each.value.topics
+...
+  for_each = var.scm-projects <<< { "toto" *key*: { description, topics }, ... }
+}
+```
+
+---
+
+# Mots de passe + Vault
+
+- L'accès
+```
+provider "vault" {
+  address   = "https://vault.company.com"
+  namespace = "abcd/api"
+}
+
+```
+resource "random_string" "my-db-password" {
+  length = 32
+  special = false
+}
+
+- La sauvegarde
+
+resource "vault_generic_secret" "postgresql" {
+  path = "secret/${var.environment}"
+  data_json = << EOT
+  {
+    "postgres_rw_username": "${var.database_user}",
+    "postgres_rw_password": "${random_string.my-db-password.result}",
+    "postgres_connection_name": "${var.database_connection_name}"
+  }
+  EOT
+}
+```
+
+---
+
+# Keys
+
+```
+provider "tls" { ... }
+
+resource "tls_private_key" ..
+```
+
+
+---
+
+# Kafka
+
+- Via le provider `aiven` (https://github.com/aiven/terraform-provider-aiven):
+  - bien au-delà de Kafka: postgres, elastic, les intégrations, le vpc peering etc.)
+
+```
+resource "aiven_kafka_topic" "my-test-topic" {
+  project = "${aiven_project.myproject.project}"
+  service_name = "${aiven_service.myservice.service_name}"
+  topic_name = "<TOPIC_NAME>"
+  partitions = 5
+  ...
+}
+```
+
+- Via le provider `kafka` (https://github.com/Mongey/terraform-provider-kafka):
+
+```
+resource "kafka_topic" "my-test-topic" {
+  name       = "${var.logical_instance}-EVENT-MYAPP-GRP-GRP-P3-C3-${var.topic}-V${var.topic_version}"
+  partitions = var.partitions
+
+  config = {
+    "segment.ms"     = "20000"
+    ...
+  }
+}
+```
+
+---
+
+# DRY
+
+- `dynamic` pour les _repeatable nested blocks_:
+
+```
+locals { regions = ["us-west-1a", "us-west-1c"] }
+
+resource "aws_security_group" "my-app-sg" {
+  dynamic "ingress_security_rules" {
+    iterator = "it" # a custom name to use below
+    for_each = local.regions
+    content {
+      source = it.value # we iterate
+```
+
+```
+
+    </textarea>
+  <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+  <script>
+    var slideshow = remark.create({ highlightLanguage: "github" });
+  </script>
+</body>
+
+</html>
